@@ -1,0 +1,17 @@
+:global(body) {
+  position: relative;
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+  background: red;
+}
+
+body {
+  position: relative;
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+  background: red;
+}
