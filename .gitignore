@@ -4,3 +4,6 @@ public/index.html
 src/build
 .DS_Store
 .vscode
+build/bundle.js
+public/code.js
+public/ui.html
