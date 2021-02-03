@@ -290,12 +290,12 @@ class Backend {
         }
       }
       if (status === 'UNPUBLISHED') {
-        break
+        continue
       }
 
       // Let's check if this figma style has the structure to be themeable
       const result = splitStyle(style.name)
-      if (result === null) break
+      if (result === null) continue
 
       const { displayThemeName, displayStyleName } = result
       const idThemeName = transformToThemeName(displayThemeName)
@@ -306,7 +306,7 @@ class Backend {
 
       // Then check if we have local theme that matches the name of this style
       const localTheme = this.findLocalThemeById(idThemeName)
-      if (localTheme === null) break
+      if (localTheme === null) continue
 
       // Save basic information about the style
       const data: BasicFigmaStyle = {
