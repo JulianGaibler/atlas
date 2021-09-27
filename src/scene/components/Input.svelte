@@ -5,11 +5,37 @@
   export let borders = false
   export let disabled = false
   export let iconText = null
+  export let iconName = null //pass svg data into this var by importing an svg in parent
   export let placeholder = 'Input something here...'
   export { className as class }
 
   let className = ''
 </script>
+
+{#if iconText || iconName}
+  <div class="input {className}">
+    <div class="icon">
+      <div class="inner">
+        {#if iconText}{iconText}{:else}{@html iconName}{/if}
+      </div>
+    </div>
+    <input
+      type="input"
+      bind:value
+      on:blur
+      {id}
+      {name}
+      {disabled}
+      {placeholder}
+      class="indent"
+      class:borders
+    />
+  </div>
+{:else}
+  <div class="input {className}">
+    <input type="input" bind:value on:blur {id} {name} {disabled} {placeholder} class:borders />
+  </div>
+{/if}
 
 <style lang="scss">
   .input {
@@ -126,25 +152,3 @@
     }
   }
 </style>
-
-{#if iconText}
-  <div class="input {className}">
-    <div class="icon">
-      <div class="inner">{iconText}</div>
-    </div>
-    <input
-      type="input"
-      bind:value
-      on:blur
-      {id}
-      {name}
-      {disabled}
-      {placeholder}
-      class="indent"
-      class:borders />
-  </div>
-{:else}
-  <div class="input {className}">
-    <input type="input" bind:value on:blur {id} {name} {disabled} {placeholder} class:borders />
-  </div>
-{/if}

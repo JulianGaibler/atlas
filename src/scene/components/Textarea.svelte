@@ -13,6 +13,24 @@
   let textarea
 </script>
 
+<div class="textarea {className}">
+  <textarea
+    type="input"
+    on:change
+    on:focus={() => {
+      if (selectOnFocus) textarea.select()
+    }}
+    bind:this={textarea}
+    bind:value
+    {id}
+    {name}
+    {rows}
+    {disabled}
+    {readonly}
+    {placeholder}
+  />
+</div>
+
 <style>
   .textarea {
     position: relative;
@@ -78,20 +96,3 @@
     outline: none;
   }
 </style>
-
-<div class="textarea {className}">
-  <textarea
-    type="input"
-    on:change
-    on:focus={() => {
-      if (selectOnFocus) textarea.select()
-    }}
-    bind:this={textarea}
-    bind:value
-    {id}
-    {name}
-    {rows}
-    {disabled}
-    {readonly}
-    {placeholder} />
-</div>

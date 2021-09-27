@@ -6,6 +6,20 @@
   let className = ''
 </script>
 
+<li
+  {itemId}
+  tabindex={itemId + 1}
+  class:highlight={selected}
+  class={className}
+  on:mouseenter
+  on:click
+>
+  <div class="icon" class:selected />
+  <div class="label">
+    <slot />
+  </div>
+</li>
+
 <style>
   li {
     align-items: center;
@@ -57,16 +71,3 @@
     background-color: transparent;
   }
 </style>
-
-<li
-  {itemId}
-  tabindex={itemId + 1}
-  class:highlight={selected}
-  class={className}
-  on:mouseenter
-  on:click>
-  <div class="icon" class:selected />
-  <div class="label">
-    <slot />
-  </div>
-</li>

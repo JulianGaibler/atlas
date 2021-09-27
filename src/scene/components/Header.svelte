@@ -2,6 +2,11 @@
   export let title = 'Title'
 </script>
 
+<header class="rowBox">
+  <div class="title">{title}</div>
+  <slot />
+</header>
+
 <style lang="scss">
   header {
     height: var(--size-medium);
@@ -16,8 +21,3 @@
     }
   }
 </style>
-
-<header class="rowBox">
-  <div class="title">{title}</div>
-  <slot />
-</header>

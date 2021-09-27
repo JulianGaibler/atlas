@@ -1,16 +1,17 @@
 <script lang="ts">
+  import type { Result, Theme } from '../../types'
+  import { ErrorType } from '../../errors'
   import { createEventDispatcher } from 'svelte'
-  import type { Theme } from '../../types'
   import parseColorString from '../parseColorString'
   import { messenger } from '../store'
 
   import Header from '../components/Header.svelte'
   import Input from '../components/Input.svelte'
   import Button from '../components/Button.svelte'
-  import Checkbox from '../components/Checkbox.svelte'
   import Info from '../components/Info.svelte'
 
   import IconWarning from '../icons/warning.svg'
+  import IconFolderSmall from '../icons/folder-small.svg'
 
   const dispatch = createEventDispatcher()
 
@@ -25,80 +26,43 @@
   }
 
   async function duplicateTheme() {
-    error = null
-
     const hexColor = getHexColor(themeColor)
     if (!hexColor) {
-      error = 'Invalid color value'
+      dispatch('error', {
+        type: ErrorType.InputInvalidColor,
+      })
       return
     }
 
-    const res = await messenger.sendMessage('editTheme', {
+    const res: Result<any> = await messenger.sendMessage('editTheme', {
       from: from.idName,
       name: themeName,
       color: `#${hexColor}`,
-      addWhitespace,
+      group,
     })
 
-    if (res.success) {
-      dispatch('changeView')
-    } else if (res.type === 'errDuplicateTheme') {
-      error = 'A theme with this name already exists!'
-    } else if (res.type === 'errIncludesForwardSlash') {
-      error = "Theme name can't contain a forward slash (/)!"
-    } else {
-      error = 'An unknown error occured :('
+    if (res.error) {
+      dispatch('error', res.error)
+      return
     }
-  }
 
-  let error = null
+    dispatch('changeView')
+  }
 
   let themeName = from.displayName
   let themeColor = getHexColor(from.color)
-  let addWhitespace = true
+  let group = from.group || ''
   $: buttonDisabled = themeName.length == 0 || themeColor.length == 0
 </script>
 
-<style lang="stylus">
-  .thumbnail
-    height 10rem
-    display flex
-    align-items center
-    font-weight: 600;
-    font-size: 24px;
-    line-height: 29px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    color: #CCCCCC;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    overflow hidden
-    padding-left 20%
-    white-space: nowrap
-    p
-      margin 0
-    span
-      color var(--black8)
-
-  .inputWithColor
-    display flex
-    align-items center
-    :global(.input)
-      flex-grow 1
-      margin-right 1em
-</style>
-
+<div class="thumbnail">
+  <p>{from.displayName} / Button / Enabled</p>
+  <p>
+    <span>{themeName.trim() || from.displayName}</span> / Button / Enabled
+  </p>
+</div>
 <section class="flexSection flexGrow">
   <Header title="Edit '{from.displayName}'" />
-  <div class="thumbnail">
-    <p>{from.displayName} / Button / Enabled</p>
-    <p>
-      <span>{themeName.trim() || from.displayName}{addWhitespace ? ' ' : ''}</span>/ Button /
-      Enabled
-    </p>
-  </div>
   <div class="rowBox flexGrow">
     <Input iconText="Aa" bind:value={themeName} placeholder="Theme Name" />
     <div class="inputWithColor">
@@ -106,10 +70,11 @@
         iconText="#"
         on:blur={correctColorString}
         bind:value={themeColor}
-        placeholder="Theme Color" />
+        placeholder="Theme Color"
+      />
       <span class="color" style="background-color: #{getHexColor(themeColor) || 333}" />
     </div>
-    <Checkbox bind:checked={addWhitespace}>Add whitespace between name and slash</Checkbox>
+    <Input iconName={IconFolderSmall} bind:value={group} placeholder="Group (optional)" />
   </div>
   <div class="rowBox">
     <div class="sectionBox flexRow">
@@ -117,20 +82,25 @@
         on:click={() => {
           dispatch('changeView')
         }}
-        variant="secondary">
+        variant="secondary"
+      >
         Cancel
       </Button>
       <Button on:click={duplicateTheme} disabled={buttonDisabled}>Edit</Button>
     </div>
-    {#if error}
-      <div class="sectionBox">
-        <Info type="error" svgIcon={IconWarning}>{error}</Info>
-      </div>
-    {/if}
     <div class="sectionBox">
       <Info svgIcon={IconWarning}>
-        If you change the themes name, the styles in your document will get renamed as well.
+        If you change the theme name, the styles in your document will get renamed as well.
       </Info>
     </div>
   </div>
 </section>
+
+<style lang="stylus">
+  .inputWithColor
+    display flex
+    align-items center
+    :global(.input)
+      flex-grow 1
+      margin-right 1em
+</style>

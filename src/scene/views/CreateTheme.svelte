@@ -1,6 +1,7 @@
 <script lang="ts">
+  import type { Result } from '../../types'
+  import { ErrorType } from '../../errors'
   import { createEventDispatcher } from 'svelte'
-  import type { Theme } from '../../types'
   import parseColorString from '../parseColorString'
   import { messenger } from '../store'
 
@@ -10,7 +11,7 @@
   import Info from '../components/Info.svelte'
 
   import IconSmiley from '../icons/smiley.svg'
-  import IconWarning from '../icons/warning.svg'
+  import IconFolderSmall from '../icons/folder-small.svg'
 
   const dispatch = createEventDispatcher()
 
@@ -23,69 +24,39 @@
   }
 
   async function createTheme() {
-    error = null
-
     const hexColor = getHexColor(themeColor)
     if (!hexColor) {
-      error = 'Invalid color value'
+      dispatch('error', {
+        type: ErrorType.InputInvalidColor,
+      })
       return
     }
 
-    const res = await messenger.sendMessage('createTheme', {
+    const res: Result<any> = await messenger.sendMessage('createTheme', {
       name: themeName,
       color: `#${hexColor}`,
+      group,
     })
 
-    if (res.success) {
-      dispatch('changeView')
-    } else if (res.type === 'duplicateTheme') {
-      error = 'A theme with this name already exists!'
-    } else if (res.type === 'includesForwardSlash') {
-      error = "Theme name can't contain a forward slash (/)!"
-    } else {
-      error = 'An unknown error occured :('
+    if (res.error) {
+      dispatch('error', res.error)
+      return
     }
-  }
 
-  let error = null
+    dispatch('changeView')
+  }
 
   let themeName = 'Dark'
   let themeColor = '3A3A3A'
+  let group = ''
   $: buttonDisabled = themeName.length == 0 || themeColor.length == 0
 </script>
 
-<style lang="stylus">
-  .thumbnail
-    height 10rem
-    display flex
-    align-items center
-    font-weight: 600;
-    font-size: 24px;
-    line-height: 29px;
-    display: flex;
-    align-items: center;
-    color: #CCCCCC;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    overflow hidden
-    padding-left 20%
-    white-space: nowrap
-    span
-      color var(--black8)
-
-  .inputWithColor
-    display flex
-    align-items center
-    :global(.input)
-      flex-grow 1
-      margin-right 1em
-</style>
-
+<div class="thumbnail">
+  <p><span>{themeName.trim() || 'Theme'}</span> / Button / Enabled</p>
+</div>
 <section class="flexSection flexGrow">
   <Header title="Register Local Theme" />
-  <div class="thumbnail">
-    <p><span>{themeName.trim() || 'Theme'}</span> / Button / Enabled</p>
-  </div>
   <div class="rowBox flexGrow">
     <Input iconText="Aa" bind:value={themeName} placeholder="Theme Name" />
     <div class="inputWithColor">
@@ -93,9 +64,11 @@
         iconText="#"
         on:blur={correctColorString}
         bind:value={themeColor}
-        placeholder="Theme Color" />
+        placeholder="Theme Color"
+      />
       <span class="color" style="background-color: #{getHexColor(themeColor) || 333}" />
     </div>
+    <Input iconName={IconFolderSmall} bind:value={group} placeholder="Group (optional)" />
   </div>
   <div class="rowBox">
     <div class="sectionBox flexRow">
@@ -103,21 +76,26 @@
         on:click={() => {
           dispatch('changeView')
         }}
-        variant="secondary">
+        variant="secondary"
+      >
         Cancel
       </Button>
       <Button on:click={createTheme} disabled={buttonDisabled}>Create</Button>
     </div>
-    {#if error}
-      <div class="sectionBox">
-        <Info type="error" svgIcon={IconWarning}>{error}</Info>
-      </div>
-    {/if}
     <div class="sectionBox">
       <Info svgIcon={IconSmiley}>
-        Registering a theme does not create any styles, it just tells Temoj to search for styles
-        with that name.
+        Registering a theme does not create any styles, it just tells the Atlas Plugin to search for
+        styles starting with the given theme name with that name.
       </Info>
     </div>
   </div>
 </section>
+
+<style lang="stylus">
+  .inputWithColor
+    display flex
+    align-items center
+    :global(.input)
+      flex-grow 1
+      margin-right 1em
+</style>

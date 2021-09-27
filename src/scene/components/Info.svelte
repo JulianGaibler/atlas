@@ -5,6 +5,17 @@
   let className = ''
 </script>
 
+<div class="onboarding-tip {type}">
+  <div class="icon">
+    <div class="icon-component">
+      {@html svgIcon}
+    </div>
+  </div>
+  <p>
+    <slot />
+  </p>
+</div>
+
 <style lang="scss">
   .onboarding-tip {
     display: flex;
@@ -39,14 +50,3 @@
     fill: inherit;
   }
 </style>
-
-<div class="onboarding-tip {type}">
-  <div class="icon">
-    <div class="icon-component">
-      {@html svgIcon}
-    </div>
-  </div>
-  <p>
-    <slot />
-  </p>
-</div>

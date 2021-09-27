@@ -1189,9 +1189,8 @@ var ui = (function () {
     }
 
     current_block_type_index = select_block_type(ctx)
-    if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](
-      ctx,
-    )
+    if_block = if_blocks[current_block_type_index] =
+      if_block_creators[current_block_type_index](ctx)
 
     const block = {
       c: function create() {
@@ -1225,9 +1224,8 @@ var ui = (function () {
           if_block = if_blocks[current_block_type_index]
 
           if (!if_block) {
-            if_block = if_blocks[current_block_type_index] = if_block_creators[
-              current_block_type_index
-            ](ctx)
+            if_block = if_blocks[current_block_type_index] =
+              if_block_creators[current_block_type_index](ctx)
             if_block.c()
           }
 
@@ -1630,9 +1628,8 @@ var ui = (function () {
     }
 
     current_block_type_index = select_block_type_2(ctx)
-    if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](
-      ctx,
-    )
+    if_block = if_blocks[current_block_type_index] =
+      if_block_creators[current_block_type_index](ctx)
 
     const block = {
       c: function create() {
@@ -1661,9 +1658,8 @@ var ui = (function () {
           if_block = if_blocks[current_block_type_index]
 
           if (!if_block) {
-            if_block = if_blocks[current_block_type_index] = if_block_creators[
-              current_block_type_index
-            ](ctx)
+            if_block = if_blocks[current_block_type_index] =
+              if_block_creators[current_block_type_index](ctx)
             if_block.c()
           }
 
@@ -2050,9 +2046,8 @@ var ui = (function () {
     }
 
     if (~(current_block_type_index = select_block_type_1(ctx))) {
-      if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](
-        ctx,
-      )
+      if_block = if_blocks[current_block_type_index] =
+        if_block_creators[current_block_type_index](ctx)
     }
 
     function selectitem_selected_binding(value) {
@@ -2113,9 +2108,8 @@ var ui = (function () {
             if_block = if_blocks[current_block_type_index]
 
             if (!if_block) {
-              if_block = if_blocks[current_block_type_index] = if_block_creators[
-                current_block_type_index
-              ](ctx)
+              if_block = if_blocks[current_block_type_index] =
+                if_block_creators[current_block_type_index](ctx)
               if_block.c()
             }
 
@@ -5120,9 +5114,8 @@ var ui = (function () {
     }
 
     if (~(current_block_type_index = select_block_type(ctx))) {
-      if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](
-        ctx,
-      )
+      if_block = if_blocks[current_block_type_index] =
+        if_block_creators[current_block_type_index](ctx)
     }
 
     const block = {
@@ -5181,9 +5174,8 @@ var ui = (function () {
             if_block = if_blocks[current_block_type_index]
 
             if (!if_block) {
-              if_block = if_blocks[current_block_type_index] = if_block_creators[
-                current_block_type_index
-              ](ctx)
+              if_block = if_blocks[current_block_type_index] =
+                if_block_creators[current_block_type_index](ctx)
               if_block.c()
             }
 

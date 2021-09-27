@@ -12,3 +12,23 @@ export function objectHash(obj: unknown): number {
   }
   return hash
 }
+
+export function groupBy<Type>(array: Type[], key: string): { [key: string]: Type[] } {
+  return array.reduce(function (rv, x) {
+    ;(rv[x[key]] = rv[x[key]] || []).push(x)
+    return rv
+  }, {})
+}
+
+export function groupObjToArray<Type>(
+  obj: { [key: string]: Type[] },
+  keyName: string,
+  valueName: string,
+): {}[] {
+  return Object.entries(obj).map(([key, value]) => {
+    let y = {}
+    y[keyName] = key
+    y[valueName] = value
+    return y
+  })
+}

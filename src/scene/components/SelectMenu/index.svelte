@@ -10,6 +10,7 @@
   export let placeholder = 'Please make a selection.'
   export let value = null //stores the current selection, note, the value will be an object from your array
   export let showGroupLabels = false //default prop, true will show option group labels
+  export let parent //default prop, true will show option group labels
   export { className as class }
 
   const dispatch = createEventDispatcher()
@@ -37,10 +38,6 @@
     menuItems.forEach((item, index) => {
       //update id
       item['id'] = index
-      //update selection
-      if (item.selected === true) {
-        value = item
-      }
     })
   }
 
@@ -79,8 +76,6 @@
     if (!event.target) {
       menuList.classList.add('hidden')
     } else if (event.target.contains(menuButton)) {
-      let topPos = 0
-
       if (value) {
         //toggle menu
         menuList.classList.remove('hidden')
@@ -110,11 +105,6 @@
       //find selected item in array
       let itemId = parseInt(event.target.getAttribute('itemId'))
 
-      //remove current selection if there is one
-      if (value) {
-        menuItems[value.id].selected = false
-      }
-      menuItems[itemId].selected = true //select current item
       updateSelectedAndIds()
       dispatch('change', menuItems[itemId])
 
@@ -140,16 +130,17 @@
 
     //lets adjust the position of the menu if its cut off from viewport
     let bounding = menuList.getBoundingClientRect()
-    let parentBounding = menuButton.getBoundingClientRect()
+    let parentBounding = menuButton.getBoundingClientRect().top - parent.getBoundingClientRect().top
+    let boundingTop = bounding.top - parent.getBoundingClientRect().top
 
-    if (bounding.top < 0) {
-      menuList.style.top = -Math.abs(parentBounding.top - 8) + 'px'
+    if (boundingTop < 0) {
+      menuList.style.top = -Math.abs(parentBounding - 8) + 'px'
     }
     if (bounding.bottom > (window.innerHeight || document.documentElement.clientHeight)) {
-      let minTop = -Math.abs(parentBounding.top - (window.innerHeight - menuHeight - 8))
+      let minTop = -Math.abs(parentBounding - (window.innerHeight - menuHeight - 8))
       let newTop = -Math.abs(bounding.bottom - window.innerHeight + 16)
       if (menuResized) {
-        menuList.style.top = -Math.abs(parentBounding.top - 8) + 'px'
+        menuList.style.top = -Math.abs(parentBounding - 8) + 'px'
       } else if (newTop > minTop) {
         menuList.style.top = minTop + 'px'
       } else {
@@ -162,6 +153,70 @@
     menuList.style.top = '0px'
   }
 </script>
+
+<ClickOutside on:clickoutside={menuClick}>
+  <div
+    on:change
+    bind:this={menuWrapper}
+    {disabled}
+    {placeholder}
+    {showGroupLabels}
+    class="wrapper {className}"
+  >
+    <button bind:this={menuButton} on:click={menuClick} {disabled}>
+      {#if value}
+        {#if value.color}<span class="color" style="background-color: {value.color}" />{/if}
+        <span class="label">{value.label}</span>
+      {:else}<span class="placeholder">{placeholder}</span>{/if}
+
+      {#if !disabled}
+        <span class="caret">
+          <svg
+            width="8"
+            height="8"
+            viewBox="0 0 8 8"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              fill-rule="evenodd"
+              clip-rule="evenodd"
+              d="M3.64645 5.35359L0.646454 2.35359L1.35356 1.64648L4.00001 4.29293L6.64645 1.64648L7.35356 2.35359L4.35356 5.35359L4.00001 5.70714L3.64645 5.35359Z"
+              fill="black"
+            />
+          </svg>
+        </span>
+      {/if}
+    </button>
+
+    <ul class="menu hidden" bind:this={menuList}>
+      {#if menuItems.length > 0}
+        {#each menuItems as item, i}
+          {#if i === 0}
+            {#if item.group && showGroupLabels}
+              <SelectDivider label>{item.group}</SelectDivider>
+            {/if}
+          {:else if i > 0 && item.group && menuItems[i - 1].group != item.group}
+            {#if showGroupLabels}
+              <SelectDivider />
+              <SelectDivider label>{item.group}</SelectDivider>
+            {:else}
+              <SelectDivider />
+            {/if}
+          {/if}
+          <SelectItem
+            on:click={menuClick}
+            on:mouseenter={removeHighlight}
+            itemId={item.id}
+            selected={item.value === value.value}
+          >
+            {item.label}
+          </SelectItem>
+        {/each}
+      {/if}
+    </ul>
+  </div>
+</ClickOutside>
 
 <style>
   .wrapper {
@@ -278,63 +333,3 @@
     box-shadow: inset 0 0 10px 10px rgba(255, 255, 255, 0.4);
   }
 </style>
-
-<ClickOutside on:clickoutside={menuClick}>
-  <div
-    on:change
-    bind:this={menuWrapper}
-    {disabled}
-    {placeholder}
-    {showGroupLabels}
-    class="wrapper {className}">
-    <button bind:this={menuButton} on:click={menuClick} {disabled}>
-      {#if value}
-        {#if value.color}<span class="color" style="background-color: {value.color}" />{/if}
-        <span class="label">{value.label}</span>
-      {:else}<span class="placeholder">{placeholder}</span>{/if}
-
-      {#if !disabled}
-        <span class="caret">
-          <svg
-            width="8"
-            height="8"
-            viewBox="0 0 8 8"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg">
-            <path
-              fill-rule="evenodd"
-              clip-rule="evenodd"
-              d="M3.64645 5.35359L0.646454 2.35359L1.35356 1.64648L4.00001 4.29293L6.64645 1.64648L7.35356 2.35359L4.35356 5.35359L4.00001 5.70714L3.64645 5.35359Z"
-              fill="black" />
-          </svg>
-        </span>
-      {/if}
-    </button>
-
-    <ul class="menu hidden" bind:this={menuList}>
-      {#if menuItems.length > 0}
-        {#each menuItems as item, i}
-          {#if i === 0}
-            {#if item.group && showGroupLabels}
-              <SelectDivider label>{item.group}</SelectDivider>
-            {/if}
-          {:else if i > 0 && item.group && menuItems[i - 1].group != item.group}
-            {#if showGroupLabels}
-              <SelectDivider />
-              <SelectDivider label>{item.group}</SelectDivider>
-            {:else}
-              <SelectDivider />
-            {/if}
-          {/if}
-          <SelectItem
-            on:click={menuClick}
-            on:mouseenter={removeHighlight}
-            itemId={item.id}
-            bind:selected={item.selected}>
-            {item.label}
-          </SelectItem>
-        {/each}
-      {/if}
-    </ul>
-  </div>
-</ClickOutside>

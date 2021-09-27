@@ -9,6 +9,22 @@
   let className = ''
 </script>
 
+<div class={className}>
+  <input
+    type="checkbox"
+    id={uniqueId}
+    bind:checked
+    bind:value
+    {disabled}
+    {tabindex}
+    onclick="this.blur();"
+    on:change
+  />
+  <label for={uniqueId}>
+    <slot />
+  </label>
+</div>
+
 <style>
   div {
     align-items: center;
@@ -76,18 +92,3 @@
     box-shadow: 0 0 0 1px var(--blue);
   }
 </style>
-
-<div class={className}>
-  <input
-    type="checkbox"
-    id={uniqueId}
-    bind:checked
-    bind:value
-    {disabled}
-    {tabindex}
-    onclick="this.blur();"
-    on:change />
-  <label for={uniqueId}>
-    <slot />
-  </label>
-</div>

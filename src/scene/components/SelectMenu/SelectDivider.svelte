@@ -2,6 +2,14 @@
   export let label = false
 </script>
 
+{#if label === true}
+  <li class="label">
+    <slot />
+  </li>
+{:else}
+  <li class="divider" />
+{/if}
+
 <style>
   .label {
     font-size: var(--font-size-small);
@@ -27,11 +35,3 @@
     margin: 8px 0 7px 0;
   }
 </style>
-
-{#if label === true}
-  <li class="label">
-    <slot />
-  </li>
-{:else}
-  <li class="divider" />
-{/if}

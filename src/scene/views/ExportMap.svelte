@@ -1,60 +1,40 @@
 <script lang="ts">
+  import type { Result } from '../../types'
   import { createEventDispatcher } from 'svelte'
   import { messenger } from '../store'
 
   import Header from '../components/Header.svelte'
   import Input from '../components/Input.svelte'
   import Button from '../components/Button.svelte'
-  import Info from '../components/Info.svelte'
   import Textarea from '../components/Textarea.svelte'
 
-  import IconSmiley from '../icons/smiley.svg'
-  import IconWarning from '../icons/warning.svg'
-
-  import MapIllustration from '../illustrations/map-illustration-red.svg'
+  import MapIllustration from '../illustrations/map-illustration-export.svg'
 
   const dispatch = createEventDispatcher()
 
   async function startExport() {
-    const res = await messenger.sendMessage('exportMap', {
+    const res: Result<any> = await messenger.sendMessage('exportMap', {
       name: mapName,
     })
 
-    if (res.success) {
-      generatedMap = res.data
-    } else if (res.type === 'errNoThemeExported') {
-      error = 'No themes were exported, likely because no themed style is published.'
-    } else {
-      error = 'An unknown error occured :('
+    if (res.error) {
+      dispatch('error', res.error)
+      return
     }
     step = 2
+    generatedMap = res.data
   }
 
   let step = 1
-  let error = null
   let mapName = ''
   let generatedMap = ''
 
   messenger.sendMessage('getDocumentName').then((docname) => {
-    console.log(docname)
     if (mapName.length < 1) {
       mapName = docname
     }
   })
 </script>
-
-<style lang="stylus">
-  .textInfo > :global(*)
-    margin-bottom var(--size-xxsmall)
-
-  .thumbnail
-    background #E46565
-    height 165px
-    overflow hidden
-    display flex
-    justify-content center
-    align-items center
-</style>
 
 <div class="thumbnail">
   {@html MapIllustration}
@@ -78,25 +58,11 @@
           on:click={() => {
             dispatch('changeView')
           }}
-          variant="secondary">
+          variant="secondary"
+        >
           Cancel
         </Button>
         <Button on:click={startExport}>Export</Button>
-      </div>
-    </div>
-  {:else if step == 2 && error}
-    <div class="rowBox flexGrow">
-      <Info type="error" svgIcon={IconWarning}>{error}</Info>
-    </div>
-    <div class="rowBox">
-      <div class="sectionBox flexRow">
-        <Button
-          on:click={() => {
-            dispatch('changeView')
-          }}
-          variant="secondary">
-          Close
-        </Button>
       </div>
     </div>
   {:else}
@@ -106,7 +72,8 @@
         readonly={true}
         placeholder="Click export to generate a Map"
         selectOnFocus={true}
-        bind:value={generatedMap} />
+        bind:value={generatedMap}
+      />
     </div>
     <div class="rowBox">
       <div class="rowBox">
@@ -115,7 +82,8 @@
             on:click={() => {
               dispatch('changeView')
             }}
-            variant="secondary">
+            variant="secondary"
+          >
             Close
           </Button>
         </div>
@@ -123,3 +91,11 @@
     </div>
   {/if}
 </section>
+
+<style lang="stylus">
+  .textInfo > :global(*)
+    margin-bottom var(--size-xxsmall)
+
+  .thumbnail
+    background #29FFB3
+</style>

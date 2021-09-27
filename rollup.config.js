@@ -7,9 +7,8 @@ import livereload from 'rollup-plugin-livereload';
 import { terser } from 'rollup-plugin-terser';
 import svg from 'rollup-plugin-svg';
 import typescript from 'rollup-plugin-typescript';
-import postcss from 'postcss';
+import postcss from 'rollup-plugin-postcss';
 import sveltePreprocess from 'svelte-preprocess';
-import scss from 'rollup-plugin-scss';
 
 
 /* Inline to single html */
@@ -27,13 +26,13 @@ export default [{
   },
   plugins: [
     svelte({
-      preprocess: sveltePreprocess([
-        scss(),
-        postcss(),
-      ]),
-      dev: !production
+      preprocess: sveltePreprocess(),
+
+      compilerOptions: {
+        dev: !production,
+      }
     }),
-    scss(),
+    postcss(),
 
     // If you have external dependencies installed from
     // npm, you'll most likely need these plugins. In
@@ -67,7 +66,7 @@ export default [{
 
     // If we're building for production (npm run build
     // instead of npm run dev), minify
-    production && terser()
+    // production && terser()
   ],
   watch: {
     clearScreen: false
@@ -83,7 +82,7 @@ export default [{
   plugins: [
     typescript(),
     commonjs(),
-    production && terser()
+    // production && terser()
   ]
 }];
 

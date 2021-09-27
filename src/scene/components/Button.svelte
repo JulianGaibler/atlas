@@ -9,6 +9,18 @@
   let className = ''
 </script>
 
+<button
+  on:click
+  on:submit|preventDefault
+  onclick="this.blur();"
+  {variant}
+  {disabled}
+  class:destructive
+  class="{variant} {className}"
+>
+  <slot />
+</button>
+
 <style>
   button {
     display: flex;
@@ -104,14 +116,3 @@
     opacity: 0.4;
   }
 </style>
-
-<button
-  on:click
-  on:submit|preventDefault
-  onclick="this.blur();"
-  {variant}
-  {disabled}
-  class:destructive
-  class="{variant} {className}">
-  <slot />
-</button>

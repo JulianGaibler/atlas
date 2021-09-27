@@ -1,4 +1,4 @@
-import type { Message } from './types'
+import type { Message, Result } from './types'
 
 type MessageHandler = (msg: Message, respond: (oMsg: Message, payload: any) => void) => void
 
@@ -50,7 +50,7 @@ export default class Messenger {
     }
   }
 
-  sendMessage(type: string, payload?: any): Promise<any> {
+  sendMessage(type: string, payload?: any): Promise<any | Result<any>> {
     return new Promise((resolve) => {
       const message: Message = {
         type,

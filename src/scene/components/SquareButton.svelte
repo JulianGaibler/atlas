@@ -8,6 +8,18 @@
   let className = ''
 </script>
 
+<button
+  on:click
+  on:submit|preventDefault
+  class:spin
+  {disabled}
+  class="icon-component {className}"
+  onclick="this.blur()"
+  style="color: var(--{color}) fill: var(--{color})"
+>
+  {@html iconName}
+</button>
+
 <style lang="stylus">
   button
     position relative
@@ -33,6 +45,8 @@
       outline none
       border-color var(--blue)
       box-shadow inset 0 0 0 1px var(--blue)
+    &:disabled
+      opacity 0.5
 
   .spin > :global(*)
     animation rotating 1s linear infinite
@@ -49,14 +63,3 @@
     fill inherit
     color inherit
 </style>
-
-<button
-  on:click
-  on:submit|preventDefault
-  class:spin
-  {disabled}
-  class="icon-component {className}"
-  onclick="this.blur()"
-  style="color: var(--{color}) fill: var(--{color})">
-  {@html iconName}
-</button>
