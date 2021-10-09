@@ -15,6 +15,13 @@ export type IdStyleName = string
 // Trimmed and with spaces replaced
 export type IdMapName = string
 
+export enum StyleType {
+  Fill = 'fill',
+  Text = 'text',
+  Stroke = 'stroke',
+  Effect = 'effect',
+}
+
 export interface Message {
   type: string
   id: number
@@ -37,16 +44,18 @@ export interface MappedTheme extends Theme {
 export interface ThemedNodes {
   theme: Theme
   mapId: IdMapName
-  fill: SceneNode[]
-  stroke: SceneNode[]
-  text: SceneNode[]
-  effect: SceneNode[]
+  nodes: (ThemedNode | RangedThemedNode)[]
 }
 
-export const MIXED_THEME: Theme = {
-  displayName: 'Mixed Theme',
-  idName: '__mixed__',
-  color: '',
+export interface ThemedNode {
+  type: StyleType
+  idStyleName: IdStyleName
+  node: SceneNode
+}
+
+export interface RangedThemedNode extends ThemedNode {
+  from: number
+  to: number
 }
 
 export interface BasicFigmaStyle {
@@ -77,4 +86,20 @@ export interface AtlasMap {
 export interface Result<Type> {
   error?: AtlasError
   data?: Type
+}
+
+export interface TypedThemeResult {
+  type: StyleType
+  themeResult: ThemeSearchResult
+}
+
+export interface RangedTypedThemeResult extends TypedThemeResult {
+  from: number
+  to: number
+}
+
+export interface ThemeSearchResult {
+  theme: Theme
+  mapId: IdMapName
+  idStyleName: IdStyleName
 }

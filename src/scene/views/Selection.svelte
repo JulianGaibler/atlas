@@ -2,7 +2,6 @@
   import { messenger, somethingSelected } from '../store'
   import { createEventDispatcher } from 'svelte'
   import type { MappedTheme, Theme, ThemedNodes } from '../../types'
-  import { MIXED_THEME } from '../../types'
   import { groupBy } from '../../utils'
 
   import SelectMenu from '../components/SelectMenu/index.svelte'
@@ -31,7 +30,6 @@
   }
 
   function selectionChanged(newValue) {
-    hasMixedItems = false
     if (newValue < 1) {
       panel = 'nothing'
     } else if (newValue < 150) {
@@ -45,10 +43,6 @@
   messenger.sendMessage('anyThemesAdded').then((res) => {
     anyThemesInstalled = res
   })
-
-  function selectMixedNodes() {
-    messenger.sendMessage('selectMixedNodes')
-  }
 
   async function updateMenuItems() {
     const themes: MappedTheme[] = await messenger.sendMessage('getAllThemesByMap')
@@ -71,14 +65,7 @@
   async function startCheck() {
     await updateMenuItems()
 
-    hasMixedItems = false
     let selection: ThemedNodes[] = (await messenger.sendMessage('categorizeSelection')).data
-
-    selection = selection.filter((item) => {
-      const isMixed = item.theme.idName === MIXED_THEME.idName
-      hasMixedItems = hasMixedItems || isMixed
-      return !isMixed
-    })
 
     let groupedSelection = groupBy(
       selection.map((node) => ({ ...node.theme, group: node.theme.group || 'noGroup' })),
@@ -119,7 +106,6 @@
   let sectionElement
   let selectedGroups: SelectedGroup[] = []
   let menuItems = {}
-  let hasMixedItems = false
 </script>
 
 <section class="scroll-box" bind:this={sectionElement}>
@@ -158,17 +144,6 @@
         <p>No themeable items selected</p>
       </div>
     {:else}
-      {#if hasMixedItems}
-        <div id="mixedWarning" class="sectionBox rowBox">
-          <Info type="error" svgIcon={IconWarning}>
-            <h1>Mixed Nodes!</h1>
-            <p>Styles cannot be changed if one node has multiple styles applied to it.</p>
-            <Button variant="tertiary" destructive={true} on:click={selectMixedNodes}>
-              select mixed nodes →
-            </Button>
-          </Info>
-        </div>
-      {/if}
       {#each selectedGroups as sGroup}
         {#if sGroup.group != 'noGroup'}<div class="sectionTitle sidePadding">
             {sGroup.group}
@@ -214,15 +189,6 @@
     margin-top var(--size-medium)
   p
     margin 2px 2px 2px 0px
-  #mixedWarning
-    h1
-      margin -2px 0 0
-      font-size var(--font-size-xlarge)
-    p
-      margin 4px 0 2px 0
-    :global(button)
-      height auto
-      margin 0 0 -2px 0
 
   .welcome
     flex-grow 1

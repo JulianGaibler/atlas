@@ -10,12 +10,17 @@ import {
   DisplayStyleName,
   IdThemeName,
   IdStyleName,
-  MIXED_THEME,
   AtlasMap,
   ExternalAtlasMap,
   LOCAL_THEME_ID,
   DisplayMapName,
   IdMapName,
+  ThemeSearchResult,
+  TypedThemeResult,
+  RangedTypedThemeResult,
+  StyleType,
+  ThemedNode,
+  RangedThemedNode,
 } from '../types'
 import Messenger from '../Messenger'
 import { ErrorType } from '../errors'
@@ -109,8 +114,6 @@ class Backend {
             respond(msg, this.importMap(msg.payload.json))
           } else if (msg.type === 'getDocumentName') {
             respond(msg, figma.root.name)
-          } else if (msg.type === 'selectMixedNodes') {
-            respond(msg, this.selectMixedNodes())
           } else if (msg.type === 'deleteFromAtlas') {
             respond(msg, this.deleteFromAtlas(msg.payload.name))
           } else if (msg.type === 'getAtlas') {
@@ -177,9 +180,80 @@ class Backend {
     return figma.currentPage.selection.length
   }
 
+  _getThemesFromTextNode(node: TextNode, type: StyleType): RangedTypedThemeResult[] {
+    let ranges: RangedTypedThemeResult[] = []
+    const fn = type == StyleType.Fill ? 'getRangeFillStyleId' : 'getRangeTextStyleId'
+    const len = node.characters.length
+
+    let start = 0
+    let currentStyle = node[fn](start, start + 1) as string
+
+    for (let end = 1; end <= len; end++) {
+      let charStyle = len == end ? null : (node[fn](end, end + 1) as string)
+
+      if (currentStyle !== charStyle) {
+        if (currentStyle) {
+          let themeResult = this._getThemeByFigmaStyleId(currentStyle)
+          if (themeResult) {
+            ranges.push({
+              type,
+              themeResult,
+              from: start,
+              to: end,
+            })
+          }
+        }
+        start = end
+        currentStyle = charStyle
+      }
+    }
+
+    return ranges
+  }
+
+  _getThemesFromNode(node: any): (TypedThemeResult | RangedTypedThemeResult)[] {
+    let styles: (TypedThemeResult | RangedTypedThemeResult)[] = []
+
+    const pushStyle = (type: StyleType, styleId) => {
+      let themeResult = this._getThemeByFigmaStyleId(styleId)
+      if (themeResult) {
+        styles.push({
+          type,
+          themeResult,
+        })
+      }
+    }
+
+    if (node.fillStyleId) {
+      if (node.fillStyleId !== figma.mixed) {
+        pushStyle(StyleType.Fill, node.fillStyleId)
+      } else {
+        styles = [...styles, ...this._getThemesFromTextNode(node, StyleType.Fill)]
+      }
+    }
+
+    if (node.textStyleId) {
+      if (node.textStyleId !== figma.mixed) {
+        pushStyle(StyleType.Text, node.textStyleId)
+      } else {
+        styles = [...styles, ...this._getThemesFromTextNode(node, StyleType.Text)]
+      }
+    }
+
+    if (node.strokeStyleId) {
+      pushStyle(StyleType.Stroke, node.strokeStyleId)
+    }
+
+    if (node.effectStyleId) {
+      pushStyle(StyleType.Effect, node.effectStyleId)
+    }
+
+    return styles
+  }
+
   categorizeSelection(): Result<ThemedNodes[]> {
     // Get all selected nodes as a flat array of nodes
-    const selectedNodes: Array<PageNode | SceneNode> = figma.currentPage.selection.flatMap((node) =>
+    const selectedNodes: Array<SceneNode> = figma.currentPage.selection.flatMap((node) =>
       (node as any).findAll !== undefined ? [node, ...(node as any).findAll()] : node,
     )
 
@@ -188,48 +262,40 @@ class Backend {
 
     // Go over every node...
     selectedNodes.forEach((node) => {
-      // For every style-type, check if it is associated
-      // with an id that is related to one of our themes
-
-      const styles = {
-        fill: this._getThemeByFigmaStyleId((node as any).fillStyleId),
-        stroke: this._getThemeByFigmaStyleId((node as any).strokeStyleId),
-        text: this._getThemeByFigmaStyleId((node as any).textStyleId),
-        effect: this._getThemeByFigmaStyleId((node as any).effectStyleId),
-      }
-
-      // For each style-type check if we found a matching theme
-      Object.keys(styles).forEach((key) => {
-        if (!styles[key]) return
-
+      // Filter out one or more themable properties from each node
+      this._getThemesFromNode(node).forEach((nodeTheme) => {
         // We're saving a node reference and the idStyle name
-        const nodeInfo = {
+
+        let nodeInfo: ThemedNode | RangedThemedNode = {
+          type: nodeTheme.type,
+          idStyleName: nodeTheme.themeResult.idStyleName,
           node,
-          idStyleName: styles[key].idStyleName,
+        }
+
+        if ('from' in nodeTheme && 'to' in nodeTheme) {
+          ;(nodeInfo as RangedThemedNode).from = nodeTheme.from
+          ;(nodeInfo as RangedThemedNode).to = nodeTheme.to
         }
 
         // Check if we already added the theme to mappedNodes
         const themeNode = mappedNodes.find(
           (themeNode) =>
-            themeNode.theme.idName === styles[key].theme.idName &&
-            themeNode.mapId === styles[key].mapId,
+            themeNode.theme.idName === nodeTheme.themeResult.theme.idName &&
+            themeNode.mapId === nodeTheme.themeResult.mapId,
         )
 
         if (themeNode) {
           // If yes, we can just push this node in it's style-type array of this theme node
-          themeNode[key].push(nodeInfo)
+          themeNode.nodes.push(nodeInfo)
         } else {
           // Otherwise we create a new theme node, with empty style-type array
           // and add it to mappedNodes
           const newObj: ThemedNodes = {
-            theme: styles[key].theme,
-            mapId: styles[key].mapId,
-            fill: [],
-            stroke: [],
-            text: [],
-            effect: [],
+            theme: nodeTheme.themeResult.theme,
+            mapId: nodeTheme.themeResult.mapId,
+            nodes: [],
           }
-          newObj[key].push(nodeInfo)
+          newObj.nodes.push(nodeInfo)
           mappedNodes.push(newObj)
         }
       })
@@ -255,17 +321,14 @@ class Backend {
     )
     if (!themeNode) return
 
-    // We go over every style-type type, because we need to know which Id to change
-    const styleTypes = ['fill', 'stroke', 'text', 'effect']
-
     let promises = []
 
-    let switchStyle = async (key: string, nodeInfo) => {
+    let switchStyle = async (nodeInfo: ThemedNode | RangedThemedNode) => {
       let figmaStyleId = null
 
       if (to.mapId === LOCAL_THEME_ID) {
         let result = this.localMap.styleMap.get(nodeInfo.idStyleName)
-        if (result && result[to.themeId] && typeCompare(key, result[to.themeId].type)) {
+        if (result && result[to.themeId] && typeCompare(nodeInfo.type, result[to.themeId].type)) {
           figmaStyleId = result[to.themeId].id
         }
       } else {
@@ -273,7 +336,7 @@ class Backend {
         const result = atlasMap.styleMap.get(nodeInfo.idStyleName)
         if (result && result[to.themeId]) {
           const importedStyle = await figma.importStyleByKeyAsync(result[to.themeId].key)
-          if (typeCompare(key, importedStyle.type)) {
+          if (typeCompare(nodeInfo.type, importedStyle.type)) {
             figmaStyleId = importedStyle.id
           }
         }
@@ -281,18 +344,26 @@ class Backend {
       // If we have a matching idStyleName we also have to check if that map contained the theme we want to style to
       if (figmaStyleId) {
         // Last but not least we replace the nodes style id with the one from the map
-        switch (key) {
-          case 'fill':
-            nodeInfo.node.fillStyleId = figmaStyleId
+        switch (nodeInfo.type) {
+          case StyleType.Fill:
+            if ('from' in nodeInfo && 'to' in nodeInfo) {
+              ;(nodeInfo.node as any).setRangeFillStyleId(nodeInfo.from, nodeInfo.to, figmaStyleId)
+            } else {
+              ;(nodeInfo.node as any).fillStyleId = figmaStyleId
+            }
             break
-          case 'stroke':
-            nodeInfo.node.strokeStyleId = figmaStyleId
+          case StyleType.Text:
+            if ('from' in nodeInfo && 'to' in nodeInfo) {
+              ;(nodeInfo.node as any).setRangeTextStyleId(nodeInfo.from, nodeInfo.to, figmaStyleId)
+            } else {
+              ;(nodeInfo.node as any).textStyleId = figmaStyleId
+            }
             break
-          case 'text':
-            nodeInfo.node.textStyleId = figmaStyleId
+          case StyleType.Stroke:
+            ;(nodeInfo.node as any).strokeStyleId = figmaStyleId
             break
-          case 'effect':
-            nodeInfo.node.effectStyleId = figmaStyleId
+          case StyleType.Effect:
+            ;(nodeInfo.node as any).effectStyleId = figmaStyleId
         }
       }
     }
@@ -305,13 +376,10 @@ class Backend {
       this.messenger.sendMessage('progressUpdate', { totalTasks, tasksDone, done, type: 'change' })
     }
 
-    for (const key of styleTypes) {
-      // Next we go over every node of that style-type
-      for (const nodeInfo of themeNode[key]) {
-        totalTasks++
-        updateProgress(false, false)
-        promises.push(switchStyle(key, nodeInfo).then(() => updateProgress(false, true)))
-      }
+    for (const nodeInfo of themeNode.nodes) {
+      totalTasks++
+      updateProgress(false, false)
+      promises.push(switchStyle(nodeInfo).then(() => updateProgress(false, true)))
     }
 
     await Promise.all(promises)
@@ -444,16 +512,8 @@ class Backend {
   }
 
   _getThemeByFigmaStyleId(
-    figmaStyleId: string | PluginAPI['mixed'],
+    figmaStyleId: string,
   ): { theme: Theme; mapId: IdMapName; idStyleName: string } | null {
-    // Check if we got a mixed style so we can warn the user later
-    if (figmaStyleId === figma.mixed) {
-      return {
-        theme: MIXED_THEME,
-        mapId: '',
-        idStyleName: '',
-      }
-    }
     // Get the style from the API and return undefined if it doesn't exist
     const style = figma.getStyleById(figmaStyleId)
     if (!style) return null
@@ -462,28 +522,7 @@ class Backend {
     const result = this.findThemeByFigmaStyle(style.name, false)
     if (!result) return null
 
-    const { theme, mapId } = result
-
-    return {
-      theme,
-      mapId,
-      idStyleName: result.idStyleName,
-    }
-  }
-
-  selectMixedNodes() {
-    const themeNode = this.lastSelection.find((item) => item.theme.idName === MIXED_THEME.idName)
-    if (!themeNode) return
-
-    const nodes = []
-
-    const styleTypes = ['fill', 'stroke', 'text', 'effect']
-    for (const key of styleTypes) {
-      for (const nodeInfo of themeNode[key]) {
-        nodes.push(nodeInfo.node)
-      }
-    }
-    figma.currentPage.selection = nodes
+    return result
   }
 
   createTheme(themeName: DisplayThemeName, themeColor: string, group: string): Result<any> {
@@ -836,10 +875,7 @@ class Backend {
     return map.themes.find((theme) => theme.idName === themeId) || null
   }
 
-  findThemeByFigmaStyle(
-    figmaStyleName: string,
-    local: boolean,
-  ): { theme: Theme; mapId: IdMapName; idStyleName: IdStyleName } | null {
+  findThemeByFigmaStyle(figmaStyleName: string, local: boolean): ThemeSearchResult | null {
     const themes: Theme[] = local ? this.getLocalThemes() : this.getAllMappedThemes()
 
     const search = transformtoIdName(figmaStyleName)

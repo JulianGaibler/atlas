@@ -12,10 +12,22 @@
   <hr />
   <Header title="Support" />
   <div class="rowBox flexSection flexGrow support">
-    <p class="sectionBox smallSidePadding">Are you having problems with Atlas, think there is a bug or do you have feedback?</p>
-    <p class="sectionBox smallSidePadding">Reach out on <a href="https://twitter.com/JulianWels" target="_blank">twitter.com/JulianWels</a></p>
-    <p class="sectionBox smallSidePadding">File an issue on <a href="https://github.com/JulianWels/atlas" target="_blank">github.com/JulianWels/atlas</a></p>
-    <p class="sectionBox smallSidePadding">Send a mail to <strong class="selectable">help@jwels.berlin</strong></p>
+    <p class="sectionBox smallSidePadding">
+      Are you having problems with Atlas, think there is a bug or do you have feedback?
+    </p>
+    <p class="sectionBox smallSidePadding">
+      Reach out on <a href="https://twitter.com/JulianWels" target="_blank"
+        >twitter.com/JulianWels</a
+      >
+    </p>
+    <p class="sectionBox smallSidePadding">
+      File an issue on <a href="https://github.com/JulianWels/atlas" target="_blank"
+        >github.com/JulianWels/atlas</a
+      >
+    </p>
+    <p class="sectionBox smallSidePadding">
+      Send a mail to <strong class="selectable">help@jwels.berlin</strong>
+    </p>
   </div>
   <hr class="spacer" />
   <Header title="Tutorials" />
@@ -42,7 +54,9 @@
     </a>
   </div>
   <hr class="spacer" />
-  <a href="https://jwels.berlin/" target="_blank" class="made-by">Made by {@html IconWels} in Berlin</a>
+  <a href="https://jwels.berlin/" target="_blank" class="made-by"
+    >Made by {@html IconWels} in Berlin</a
+  >
 </section>
 
 <style lang="stylus">
