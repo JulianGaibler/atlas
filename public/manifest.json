@@ -4,5 +4,18 @@
   "api": "1.0.0",
   "main": "code.js",
   "ui": "ui.html",
-  "editorType": ["figma"]
+  "editorType": ["figma"],
+  "parameterOnly": false,
+  "parameters": [
+    {
+      "name": "From",
+      "key": "from",
+      "description": "Enter theme to switch from"
+    },
+    {
+      "name": "To",
+      "key": "to",
+      "description": "Enter theme to switch to"
+    }
+  ]
 }

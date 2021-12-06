@@ -10,14 +10,15 @@ type MessageHandler = (msg: Message, respond: (oMsg: Message, payload: any) => v
 export default class Messenger {
   private messageMap: Map<number, (value?: unknown) => void>
   private isScene: boolean
+  private onMessageObj: Window | UIAPI
 
   constructor(isScene: boolean, messageHandler: MessageHandler) {
     this.messageMap = new Map()
     this.isScene = isScene
 
-    const objWithOnMessage = isScene ? window : figma.ui
+    this.onMessageObj = isScene ? window : figma.ui
 
-    objWithOnMessage.onmessage = (message: any) => {
+    this.onMessageObj.onmessage = (message: any) => {
       let msg: Message
       if (this.isScene) {
         msg = message.data.pluginMessage
@@ -66,5 +67,9 @@ export default class Messenger {
 
       this.messageMap.set(message.id, resolve)
     })
+  }
+
+  close() {
+    this.onMessageObj.onmessage = undefined
   }
 }

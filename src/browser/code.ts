@@ -23,7 +23,7 @@ import {
   RangedThemedNode,
 } from '../types'
 import Messenger from '../Messenger'
-import { ErrorType } from '../errors'
+import { ErrorType, getErrorMessage } from '../errors'
 
 const SUCCESS = {}
 
@@ -34,7 +34,7 @@ class Backend {
 
   uiVisible: boolean
 
-  messenger: Messenger
+  messenger: Messenger | null
 
   constructor() {
     this.localMap = {
@@ -47,7 +47,18 @@ class Backend {
     this.uiVisible = false
     this.atlas = []
     this.lastSelection = []
+    this.messenger = null
 
+    this.loadPluginStorage()
+    this.generateLocalMap()
+
+    figma.on('selectionchange', () => {
+      this.messenger && this.messenger.sendMessage('selectionChange', this.getSelection())
+    })
+  }
+
+  showUI() {
+    if (this.uiVisible) return
     this.messenger = new Messenger(
       false,
       (msg: Message, respond: (oMsg: Message, payload: any) => void) => {
@@ -138,15 +149,16 @@ class Backend {
       },
     )
 
-    this.loadPluginStorage()
-    this.generateLocalMap()
-
     figma.showUI(__html__, { width: 290, height: 485 })
     this.uiVisible = true
+  }
 
-    figma.on('selectionchange', () =>
-      this.messenger.sendMessage('selectionChange', this.getSelection()),
-    )
+  hideUI() {
+    if (!this.uiVisible) return
+    figma.ui.close()
+    this.uiVisible = false
+    this.messenger.close()
+    this.messenger = null
   }
 
   /**
@@ -158,7 +170,7 @@ class Backend {
     if (str.length < 1) return
     const obj = JSON.parse(str)
     this.localMap = obj.localMap
-    obj.atlas.map((str) => this.importMap(str))
+    obj.atlas.map((str) => this.importMap(str, false))
   }
 
   updatePluginStorage() {
@@ -373,7 +385,13 @@ class Backend {
 
     let updateProgress = async (done, count) => {
       if (count) tasksDone++
-      this.messenger.sendMessage('progressUpdate', { totalTasks, tasksDone, done, type: 'change' })
+      this.messenger &&
+        this.messenger.sendMessage('progressUpdate', {
+          totalTasks,
+          tasksDone,
+          done,
+          type: 'change',
+        })
     }
 
     for (const nodeInfo of themeNode.nodes) {
@@ -433,10 +451,11 @@ class Backend {
     }
     this.localMap = newLocalMap
     if (this.uiVisible) {
-      this.messenger.sendMessage(
-        'updatedLocalMap',
-        this.localMap.themes.length > 0 ? newLocalMap.lastUpdated.toISOString() : null,
-      )
+      this.messenger &&
+        this.messenger.sendMessage(
+          'updatedLocalMap',
+          this.localMap.themes.length > 0 ? newLocalMap.lastUpdated.toISOString() : null,
+        )
     }
     return newLocalMap
   }
@@ -665,12 +684,13 @@ class Backend {
 
       let updateProgress = async (done, count) => {
         if (count) tasksDone++
-        this.messenger.sendMessage('progressUpdate', {
-          totalTasks,
-          tasksDone,
-          done,
-          type: 'duplicate',
-        })
+        this.messenger &&
+          this.messenger.sendMessage('progressUpdate', {
+            totalTasks,
+            tasksDone,
+            done,
+            type: 'duplicate',
+          })
       }
 
       for (const themes of fromMap.styleMap.values()) {
@@ -791,7 +811,7 @@ class Backend {
     }
   }
 
-  importMap(json: string): Result<any> {
+  importMap(json: string, saveInStorage = true): Result<any> {
     let obj
     try {
       obj = JSON.parse(json)
@@ -821,7 +841,9 @@ class Backend {
     const map: AtlasMap = Object.assign({ mapId }, res.data)
 
     this.atlas.push(map)
-    this.updatePluginStorage()
+    if (saveInStorage) {
+      this.updatePluginStorage()
+    }
 
     return SUCCESS
   }
@@ -987,4 +1009,60 @@ function typeCompare(attrib: string, style: string) {
   return false
 }
 
-new Backend()
+function colorPreviewSVG(color: string) {
+  return `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="9" cy="8.99976" r="9" fill="${color}"/>
+  <circle cx="9" cy="8.99976" r="8.5" stroke="black" stroke-opacity="0.08"/>
+  </svg>`
+}
+
+const backend = new Backend()
+
+figma.parameters.on('input', ({ key, result, parameters, query }) => {
+  if (figma.currentPage.selection.length === 0) {
+    result.setError('Please select one or mode nodes first')
+    return
+  }
+
+  let themes
+  if (key === 'to') {
+    const fromTheme = parameters.from
+    const mappedThemes = backend.getAllMappedThemes()
+    themes = mappedThemes
+      .filter((theme) => theme.group === fromTheme.group)
+      .filter((t) => t.idName !== fromTheme.idName || t.mapId !== fromTheme.mapId)
+  } else {
+    const sResult = backend.categorizeSelection()
+
+    if (sResult.error) {
+      result.setError(getErrorMessage(sResult.error))
+      return
+    }
+    themes = sResult.data.map((s) => s.theme).filter((t, i, a) => a.indexOf(t) === i)
+  }
+
+  const r = themes
+    .map((theme) => {
+      return {
+        name: `${theme.mapName}  |  ${theme.displayName}`,
+        data: theme,
+        icon: colorPreviewSVG(theme.color),
+      }
+    })
+    .filter((t) => t.name.toLowerCase().includes(query.toLowerCase()))
+  result.setSuggestions(r)
+})
+
+figma.on('run', ({ parameters }) => {
+  if (parameters) {
+    backend.categorizeSelection()
+    backend
+      .changeTheme(
+        { mapId: parameters.from.mapId, themeId: parameters.from.idName },
+        { mapId: parameters.to.mapId, themeId: parameters.to.idName },
+      )
+      .then(() => figma.closePlugin())
+  } else {
+    backend.showUI()
+  }
+})
