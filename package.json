@@ -10,6 +10,7 @@
     "validate": "svelte-check"
   },
   "devDependencies": {
+    "@figma/plugin-typings": "^1.39.1",
     "@rollup/plugin-commonjs": "^20.0.0",
     "@rollup/plugin-image": "^2.1.0",
     "@rollup/plugin-node-resolve": "^13.0.4",

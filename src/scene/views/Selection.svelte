@@ -8,7 +8,6 @@
   import Button from '../components/Button.svelte'
   import Info from '../components/Info.svelte'
 
-  import IconWarning from '../icons/warning.svg'
   import IconWels from '../icons/wels-text.svg'
   import IllustrationSelNone from '../illustrations/selection-none.svg'
   import IllustrationSelNoTheme from '../illustrations/selection-notheme.svg'
