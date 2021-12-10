@@ -132,6 +132,7 @@ class Backend {
               msg,
               this.atlas.map((m) => ({
                 mapName: m.mapName,
+                mapId: m.mapId,
                 lastUpdatedISO: m.lastUpdated.toISOString(),
                 themes: m.themes,
               })),
@@ -812,9 +813,9 @@ class Backend {
   }
 
   importMap(json: string, saveInStorage = true): Result<any> {
-    let obj
+    let objects: any
     try {
-      obj = JSON.parse(json)
+      objects = JSON.parse(json)
     } catch (e) {
       return {
         error: {
@@ -823,24 +824,33 @@ class Backend {
       }
     }
 
-    const res = deserializeAtlasMap(obj)
-    if (res.error) {
-      return res
+    // check if object is array or object
+    if (!Array.isArray(objects)) {
+      objects = [objects]
     }
 
-    // Change name until there is no namespace collision
-    let mapId = transformToMapId(res.data.mapName)
-    let counter = 0
-    while (true) {
-      if (!this.atlas.some((map) => map.mapId == mapId)) {
-        break
+    // iterate over objects
+    for (const object of objects) {
+      const res = deserializeAtlasMap(object)
+      if (res.error) {
+        return res
       }
-      mapId = `${mapId}-${counter++}`
+
+      // Change name until there is no namespace collision
+      let originalMapId = transformToMapId(res.data.mapName)
+      let mapId = originalMapId
+      let counter = 0
+      while (true) {
+        if (!this.atlas.some((map) => map.mapId == mapId)) {
+          break
+        }
+        mapId = `${originalMapId}-${counter++}`
+      }
+      console.log('mapId', mapId)
+      const map: AtlasMap = Object.assign({ mapId }, res.data)
+
+      this.atlas.push(map)
     }
-
-    const map: AtlasMap = Object.assign({ mapId }, res.data)
-
-    this.atlas.push(map)
     if (saveInStorage) {
       this.updatePluginStorage()
     }

@@ -13,12 +13,16 @@
   let atlas: AtlasMap[] = []
   let localThemes = []
 
-  messenger.sendMessage('getLocalThemes').then((r) => {
-    localThemes = r
-  })
-  messenger.sendMessage('getAtlas').then((r) => {
-    atlas = r
-  })
+  function updateData() {
+    messenger.sendMessage('getLocalThemes').then((r) => {
+      localThemes = r
+    })
+    messenger.sendMessage('getAtlas').then((r) => {
+      atlas = r
+    })
+  }
+
+  updateData()
 
   $: showLocal = localThemes.length > 0
 
@@ -55,7 +59,7 @@
       />
     </div>
   {/if}
-  {#each atlas as map (map.mapName)}
+  {#each atlas as map (map.mapId)}
     <div class="singleItem">
       <span class="color-swatch">
         <span style="background-color: {map.themes[0]?.color}" />
@@ -69,7 +73,7 @@
         iconName={IconMinus}
         on:click={async () => {
           await messenger.sendMessage('deleteFromAtlas', { name: map.mapName })
-          dispatch('changeView')
+          updateData()
         }}
       />
     </div>
