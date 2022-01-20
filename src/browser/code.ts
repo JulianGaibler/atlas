@@ -206,15 +206,17 @@ class Backend {
 
       if (currentStyle !== charStyle) {
         if (currentStyle) {
-          let themeResult = this._getThemeByFigmaStyleId(currentStyle)
-          if (themeResult) {
-            ranges.push({
-              type,
-              themeResult,
-              from: start,
-              to: end,
-            })
-          }
+          let themeResults = this._getThemesByFigmaStyleId(currentStyle)
+          themeResults.forEach((themeResult) => {
+            if (themeResult) {
+              ranges.push({
+                type,
+                themeResult,
+                from: start,
+                to: end,
+              })
+            }
+          })
         }
         start = end
         currentStyle = charStyle
@@ -228,13 +230,15 @@ class Backend {
     let styles: (TypedThemeResult | RangedTypedThemeResult)[] = []
 
     const pushStyle = (type: StyleType, styleId) => {
-      let themeResult = this._getThemeByFigmaStyleId(styleId)
-      if (themeResult) {
-        styles.push({
-          type,
-          themeResult,
-        })
-      }
+      let themeResults = this._getThemesByFigmaStyleId(styleId)
+      themeResults.forEach((themeResult) => {
+        if (themeResult) {
+          styles.push({
+            type,
+            themeResult,
+          })
+        }
+      })
     }
 
     if (node.fillStyleId) {
@@ -345,6 +349,7 @@ class Backend {
           figmaStyleId = result[to.themeId].id
         }
       } else {
+        debugger
         const atlasMap = this.atlas.find((map) => map.mapId === to.mapId)
         const result = atlasMap.styleMap.get(nodeInfo.idStyleName)
         if (result && result[to.themeId]) {
@@ -423,23 +428,23 @@ class Backend {
 
     localStyles.forEach((style: PaintStyle | TextStyle | EffectStyle) => {
       // Let's check if this figma style has the structure to be themeable
-      const result = this.findThemeByFigmaStyle(style.name, true)
-      if (result === null) return
+      const results = this.findThemesByFigmaStyle(style.name, true)
+      if (results.length == 0) return
 
-      const { theme, idStyleName } = result
+      results.forEach(({ theme, idStyleName }) => {
+        // Save basic information about the style
+        const data: BasicFigmaStyle = {
+          id: style.id,
+          key: style.key,
+          type: style.type,
+        }
+        // If we already have themes associated to this style name, we add to the ThemeStyles object, otherwise we create a new one
+        const part = newMap.get(idStyleName) || {}
 
-      // Save basic information about the style
-      const data: BasicFigmaStyle = {
-        id: style.id,
-        key: style.key,
-        type: style.type,
-      }
-      // If we already have themes associated to this style name, we add to the ThemeStyles object, otherwise we create a new one
-      const part = newMap.get(idStyleName) || {}
-
-      // TODO: Maybe check if we're overwriting something here and warn the user
-      part[theme.idName] = data
-      newMap.set(idStyleName, part)
+        // TODO: Maybe check if we're overwriting something here and warn the user
+        part[theme.idName] = data
+        newMap.set(idStyleName, part)
+      })
     })
 
     // Create the map object
@@ -489,28 +494,28 @@ class Backend {
       }
 
       // Let's check if this figma style has the structure to be themeable
-      const result = this.findThemeByFigmaStyle(style.name, true)
-      if (result === null) continue
+      const results = this.findThemesByFigmaStyle(style.name, true)
+      if (results.length == 0) continue
 
-      const { theme, idStyleName } = result
+      results.forEach(({ theme, idStyleName }) => {
+        if (!containedThemeIds.includes(theme.idName)) {
+          containedThemeIds.push(theme.idName)
+        }
 
-      if (!containedThemeIds.includes(theme.idName)) {
-        containedThemeIds.push(theme.idName)
-      }
+        // Save basic information about the style
+        const data: BasicFigmaStyle = {
+          id: style.id,
+          key: style.key,
+          type: style.type,
+        }
+        // If we already have themes associated to this style name, we add to the
+        // ThemeStyles object, otherwise we create a new one
+        const part = newMap.get(idStyleName) || {}
 
-      // Save basic information about the style
-      const data: BasicFigmaStyle = {
-        id: style.id,
-        key: style.key,
-        type: style.type,
-      }
-      // If we already have themes associated to this style name, we add to the
-      // ThemeStyles object, otherwise we create a new one
-      const part = newMap.get(idStyleName) || {}
-
-      // TODO: Maybe check if we're overwriting something here and warn the user
-      part[theme.idName] = data
-      newMap.set(idStyleName, part)
+        // TODO: Maybe check if we're overwriting something here and warn the user
+        part[theme.idName] = data
+        newMap.set(idStyleName, part)
+      })
     }
 
     const containedThemes = this.localMap.themes.filter((map) =>
@@ -531,18 +536,16 @@ class Backend {
     }
   }
 
-  _getThemeByFigmaStyleId(
-    figmaStyleId: string,
-  ): { theme: Theme; mapId: IdMapName; idStyleName: string } | null {
+  _getThemesByFigmaStyleId(figmaStyleId: string): ThemeSearchResult[] | null {
     // Get the style from the API and return undefined if it doesn't exist
     const style = figma.getStyleById(figmaStyleId)
     if (!style) return null
 
     // Trim to get the string before a possible slash and check against theme names
-    const result = this.findThemeByFigmaStyle(style.name, false)
-    if (!result) return null
+    const results = this.findThemesByFigmaStyle(style.name, false)
+    if (results.length == 0) return null
 
-    return result
+    return results
   }
 
   createTheme(themeName: DisplayThemeName, themeColor: string, group: string): Result<any> {
@@ -670,11 +673,13 @@ class Backend {
             break
         }
 
-        const { theme } = this.findThemeByFigmaStyle(fromFigmaStyle.name, false)
-        let displayStyleName = getDisplayStyleName(theme, fromFigmaStyle.name)
+        const themes = this.findThemesByFigmaStyle(fromFigmaStyle.name, false)
+        themes.forEach(({ theme }) => {
+          let displayStyleName = getDisplayStyleName(theme, fromFigmaStyle.name)
 
-        newFigmaStyle.name = result.data.displayName + '/' + displayStyleName
-        newFigmaStyle.description = fromFigmaStyle.description
+          newFigmaStyle.name = result.data.displayName + '/' + displayStyleName
+          newFigmaStyle.description = fromFigmaStyle.description
+        })
       }
 
       let fromMap = this.findMapById(from.mapId)
@@ -908,12 +913,21 @@ class Backend {
   }
 
   findThemeByFigmaStyle(figmaStyleName: string, local: boolean): ThemeSearchResult | null {
+    const themes = this.findThemesByFigmaStyle(figmaStyleName, local)
+    if (themes.length == 0) {
+      return null
+    }
+    return themes[0]
+  }
+
+  findThemesByFigmaStyle(figmaStyleName: string, local: boolean): ThemeSearchResult[] {
     const themes: Theme[] = local ? this.getLocalThemes() : this.getAllMappedThemes()
 
     const search = transformtoIdName(figmaStyleName)
     const searchSplit = search.split('/')
+    let themeSearchResult = []
 
-    if (searchSplit.length < 2) return null
+    if (searchSplit.length < 2) return []
 
     searchloop: for (const theme of themes) {
       // Split current name in parts
@@ -930,9 +944,10 @@ class Backend {
 
       const mapId = local ? LOCAL_THEME_ID : (theme as MappedTheme).mapId
 
-      return { theme, mapId, idStyleName: search.substr(theme.idName.length + 1) }
+      themeSearchResult.push({ theme, mapId, idStyleName: search.substr(theme.idName.length + 1) })
     }
-    return null
+
+    return themeSearchResult
   }
 }
 
